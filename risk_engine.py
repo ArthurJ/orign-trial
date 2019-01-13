@@ -245,6 +245,7 @@ def umbrella_score(user_risk):
 
     return user_risk
 
+risk_modifiers = [score_mapping, umbrella_score]
 
 # Process helper functions
 def user_risk_special(user_risk, user_profile, special_cases):
@@ -288,11 +289,11 @@ def user_risk_initial(risk,
     return user_risk
 
 
-def process(user_profile, phase1_rules, phase2_rule_dict, phase3_rules):
-    base_risk = calc_base_risk(user_profile, phase1_rules)
-    user_risk = user_risk_initial(base_risk, user_profile, phase2_rule_dict)
+def process(user_profile, step1_rules, step2_rules, step3_rules, finalization_mathods):
+    base_risk = calc_base_risk(user_profile, step1_rules)
+    user_risk = user_risk_initial(base_risk, user_profile, step2_rules)
     
-    to_apply = (rule(user_profile) for rule in phase3_rules)
+    to_apply = (rule(user_profile) for rule in step3_rules)
 
     for modifiers in to_apply:
         for key, modifier in modifiers.items():
@@ -306,9 +307,9 @@ def process(user_profile, phase1_rules, phase2_rule_dict, phase3_rules):
             else:
                 user_risk[key] += modifier
     
+    for method in finalization_mathods:
+        user_risk = method(user_risk)
 
-    user_risk = score_mapping(user_risk)
-    user_risk = umbrella_score(user_risk)
     return user_risk
 
 
@@ -328,10 +329,10 @@ if __name__ == '__main__':
                 }
 
     assert \
-        process(example, general_rules, eligibility, risk_specific_rules) == \
+        process(example, general_rules, eligibility, risk_specific_rules, risk_modifiers) == \
         {'auto': [{'key':1, 'value':'regular'}], 
         'disability': 'ineligible', 
         'home':[{'key':1, 'value':'economic'}, {'key':2, 'value':'regular'}], 
         'life':'regular', 'umbrella':'regular'}
 
-    print(process(example, general_rules, eligibility, risk_specific_rules))
+    print(process(example, general_rules, eligibility, risk_specific_rules, risk_modifiers))
