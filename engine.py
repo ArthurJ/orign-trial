@@ -187,12 +187,72 @@ def calc_base_risk(user_profile, rules) -> int:
 
 
 eligibility = {'auto': auto_elegibility, 'disability':disability_elegibility,
-               'home': home_elegibility, 'home':home_elegibility, 
-               'life':life_elegibility}
+               'home': home_elegibility, 'life':life_elegibility}
 
 general_rules = [rule_3, rule_4]
 
 risk_specific_rules = [rule_5, rule_6, rule_7, rule_8, rule_9_auto, rule_9_home]
+
+
+def user_risk_special(user_risk, user_profile, special_cases):
+    '''
+        >>> user_risk_special({'auto': 127}, \
+                                {'vehicles':[{"key": 51, "year": 2018}] }, \
+                                {'auto':'vehicles'})
+        {'auto': [{'key': 51, 'value': 127}]}
+    '''
+    for paper, obj in special_cases.items():
+        paper_risk = user_risk[paper]
+        user_risk[paper] = []
+        for item in user_profile[obj]:
+            item = {'key':item['key'], 'value':paper_risk}
+            risk_paper = user_risk[paper]
+            risk_paper.append(item)
+            user_risk[paper] = risk_paper
+    return user_risk
+
+def user_risk_initial(risk, 
+                        user_profile, 
+                        eligibility_rules,
+                        special_cases = {'auto':'vehicles', 'home':'houses'}):
+    '''
+        >>> user_risk_initial(37, {'income': 10, 'vehicles': [] }, \
+                                    {'disability': lambda x: True, \
+                                    'auto': lambda x: False}, {})
+        {'disability': 37, 'auto': 'ineligible'}
+    '''
+    user_risk = {key:eligible(user_profile) 
+                    for key, eligible in eligibility_rules.items()}
+
+    for key, value in user_risk.items():
+        if value:
+            user_risk[key] = risk
+        else:
+            user_risk[key] = 'ineligible'
+    
+    user_risk = user_risk_special(user_risk, user_profile, special_cases)
+
+    return user_risk
+
+def process(user_profile, phase1_rules, phase2_rule_dict, phase3_rules):
+    base_risk = calc_base_risk(user_profile, phase1_rules)
+    user_risk = user_risk_initial(base_risk, user_profile, phase2_rule_dict)
+    
+    to_apply = (rule(user_profile) for rule in phase3_rules)
+
+    for modifiers in to_apply:
+        for key, modifier in modifiers.items():
+            if user_risk[key] == 'ineligible':
+                continue
+            elif isinstance(modifier, dict):
+                for sub_key, value in modifier.items():
+                    new_value = user_risk[key][sub_key-1]['value'] + value
+                    user_risk[key][sub_key-1] = {'key':sub_key, 'value':new_value} 
+            else:
+                user_risk[key] += modifier
+    
+    return user_risk
+
 
 if __name__ == '__main__':
     import doctest
@@ -208,52 +268,12 @@ if __name__ == '__main__':
                 "risk_questions": [0, 1, 0],
                 "vehicles": [ {"key": 1, "year": 2018} ] 
                 }
-    
-    def user_risk_base(risk, user_profile, eligibility_rules):
-        # TODO escrever um teste ou reescrever a função
-        user_risk = {key:eligible(user_profile) 
-                        for key, eligible in eligibility_rules.items()}
 
-        for key, value in user_risk.items():
-            if value:
-                user_risk[key] = risk
-            else:
-                user_risk[key] = 'ineligible'
-        
-        special_cases = {'auto':'vehicles', 'home':'houses'}
-        for paper, obj in special_cases.items():
-            paper_risk = user_risk[paper]
-            user_risk[paper] = []
-            for item in user_profile[obj]:
-                item = {'key':item['key'], 'value':paper_risk}
-                risk_paper = user_risk[paper]
-                risk_paper.append(item)
-                user_risk[paper] = risk_paper
+    assert \
+        process(example, general_rules, eligibility, risk_specific_rules) == \
+        {'auto': [{'key':1, 'value':2}], 
+        'disability': 'ineligible', 
+        'home':[{'key':1, 'value':0}, {'key':2, 'value':1}], 
+        'life':2}
 
-        return user_risk
-
-
-    def process(user_profile):
-        # TODO escrever teste ou reescrever função
-        # TODO escrever função que define elegibilidade da tipo umbrella
-
-        base_risk = calc_base_risk(user_profile, general_rules)
-        user_risk = user_risk_base(base_risk, user_profile, eligibility)
-        
-        to_apply = (rule(user_profile) for rule in risk_specific_rules)
-
-        for modifiers in to_apply:
-            for key, modifier in modifiers.items():
-                if isinstance(modifier, dict):
-                    for sub_key, value in modifier.items():
-                        new_value = user_risk[key][sub_key-1]['value'] + value
-                        user_risk[key][sub_key-1] = {'key':sub_key, 'value':new_value} 
-                elif user_risk[key] != 'ineligible':
-                    user_risk[key] += modifier
-
-
-        print(user_risk)
-    
-    process(example)
-
-    
+    # TODO mapping to the 'economic'/'regular'/'responsible' descriptions
