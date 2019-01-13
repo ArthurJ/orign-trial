@@ -1,15 +1,18 @@
 from datetime import datetime
 
 # Elegibility Rules
+
+
 def auto_elegibility(user_profile) -> bool:
     '''
         >>> auto_elegibility({'vehicles':[]})
         False
-        >>> auto_elegibility({'vehicles':[ {"key": 1, "year": 2018} ]})
+        >>> auto_elegibility({'vehicles':[{"key": 1, "year": 2018}]})
         True
     '''
     vehicles = user_profile['vehicles']
     return len(vehicles) > 0
+
 
 def disability_elegibility(user_profile) -> bool:
     '''
@@ -20,6 +23,7 @@ def disability_elegibility(user_profile) -> bool:
     '''
     income = user_profile['income']
     return income > 0
+
 
 def home_elegibility(user_profile) -> bool:
     '''
@@ -34,6 +38,7 @@ def home_elegibility(user_profile) -> bool:
     '''
     houses = user_profile['houses']
     return len(houses) > 0
+
 
 def life_elegibility(user_profile) -> bool:
     '''
@@ -64,7 +69,9 @@ def rule_3(user_profile) -> int:
         return - 2
     elif user_profile['age'] < 40:
         return - 1
-    else: return 0
+    else:
+        return 0
+
 
 def rule_4(user_profile) -> int:
     '''
@@ -95,12 +102,13 @@ def rule_5(user_profile) -> dict:
     analysis = {}
     for house in user_profile['houses']:
         if house['ownership_status'] == 'mortgaged':
-            analysis_houses = analysis.get('home',{})
+            analysis_houses = analysis.get('home', {})
             analysis_houses.update({house['key']: 1})
             analysis['home'] = analysis_houses
             analysis['disability'] = 1
     return analysis
-    
+
+
 def rule_6(user_profile) -> dict:
     '''
         >>> rule_6({"dependents": 2})
@@ -111,8 +119,9 @@ def rule_6(user_profile) -> dict:
         {}
     '''
     if user_profile['dependents'] > 0:
-        return {'disability': 1, 'life':1}
+        return {'disability': 1, 'life': 1}
     return {}
+
 
 def rule_7(user_profile) -> dict:
     '''
@@ -124,6 +133,7 @@ def rule_7(user_profile) -> dict:
     if user_profile['marital_status'] == 'married':
         return {'life': 1, 'disability': -1}
     return {}
+
 
 def rule_8(user_profile) -> dict:
     '''
@@ -147,7 +157,8 @@ def rule_8(user_profile) -> dict:
             analysis_auto.update({vehicle['key']: 1})
             analysis['auto'] = analysis_auto
     return analysis
-        
+
+
 def rule_9_auto(user_profile) -> dict:
     '''
         >>> rule_9_auto({'vehicles': [{"key": 1, "year": 2018}]})
@@ -157,8 +168,9 @@ def rule_9_auto(user_profile) -> dict:
         {}
     '''
     if len(user_profile['vehicles']) == 1:
-        return {'auto': {1:1}}
+        return {'auto': {1: 1}}
     return {}
+
 
 def rule_9_home(user_profile) -> dict:
     '''
@@ -174,12 +186,14 @@ def rule_9_home(user_profile) -> dict:
 
 
 # Rules organized for each step
-eligibility = {'auto': auto_elegibility, 'disability':disability_elegibility,
-               'home': home_elegibility, 'life':life_elegibility}
+eligibility = {'auto': auto_elegibility, 'disability': disability_elegibility,
+               'home': home_elegibility, 'life': life_elegibility}
 
 general_rules = [rule_3, rule_4]
 
-risk_specific_rules = [rule_5, rule_6, rule_7, rule_8, rule_9_auto, rule_9_home]
+risk_specific_rules = [rule_5, rule_6,
+                       rule_7, rule_8, rule_9_auto, rule_9_home]
+
 
 # Last step methods
 def score_mapping(user_risk):
@@ -188,9 +202,12 @@ def score_mapping(user_risk):
         {'auto': 'ineligible', 'home': [{'value': 'regular'}, {'value': 'responsible'}], 'life': 'economic'}
     '''
     def mapping(v):
-        if v <= 0: return 'economic'
-        elif 0 < v <=2: return 'regular'
-        else: return 'responsible'
+        if v <= 0:
+            return 'economic'
+        elif 0 < v <= 2:
+            return 'regular'
+        else:
+            return 'responsible'
 
     for paper, value in user_risk.items():
         if value == 'ineligible':
@@ -203,6 +220,7 @@ def score_mapping(user_risk):
 
     return user_risk
 
+
 def umbrella_score(user_risk):
     '''
         >>> umbrella_score({'auto': 'ineligible', \
@@ -211,7 +229,7 @@ def umbrella_score(user_risk):
                                      'life': 'responsible'})
         {'auto': 'ineligible', 'home': [{'value': 'economic'}, {'value': 'regular'}], 'life': 'responsible', 'umbrella': 'regular'}
     '''
-    # TODO, não há uma regra clara para definir o score da  umbrella, necessário perguntar  
+    # TODO, não há uma regra clara para definir o score da  umbrella, necessário perguntar
     for _, value in user_risk.copy().items():
         if value == 'ineligible':
             continue
@@ -232,7 +250,9 @@ def umbrella_score(user_risk):
 
     return user_risk
 
+
 risk_modifiers = [score_mapping, umbrella_score]
+
 
 # Process helper functions
 def calc_base_risk(user_profile, rules) -> int:
@@ -247,6 +267,7 @@ def calc_base_risk(user_profile, rules) -> int:
         base_risk += rule(user_profile)
     return base_risk
 
+
 def user_risk_special(user_risk, user_profile, special_cases):
     '''
         >>> user_risk_special({'auto': 127}, \
@@ -258,31 +279,32 @@ def user_risk_special(user_risk, user_profile, special_cases):
         paper_risk = user_risk[paper]
         user_risk[paper] = []
         for item in user_profile[obj]:
-            item = {'key':item['key'], 'value':paper_risk}
+            item = {'key': item['key'], 'value': paper_risk}
             risk_paper = user_risk[paper]
             risk_paper.append(item)
             user_risk[paper] = risk_paper
     return user_risk
 
-def user_risk_initial(risk, 
-                        user_profile, 
-                        eligibility_rules,
-                        special_cases = {'auto':'vehicles', 'home':'houses'}):
+
+def user_risk_initial(risk,
+                      user_profile,
+                      eligibility_rules,
+                      special_cases={'auto': 'vehicles', 'home': 'houses'}):
     '''
         >>> user_risk_initial(37, {'income': 10, 'vehicles': [] }, \
                                     {'disability': lambda x: True, \
                                     'auto': lambda x: False}, {})
         {'disability': 37, 'auto': 'ineligible'}
     '''
-    user_risk = {key:eligible(user_profile) 
-                    for key, eligible in eligibility_rules.items()}
+    user_risk = {key: eligible(user_profile)
+                 for key, eligible in eligibility_rules.items()}
 
     for key, value in user_risk.items():
         if value:
             user_risk[key] = risk
         else:
             user_risk[key] = 'ineligible'
-    
+
     user_risk = user_risk_special(user_risk, user_profile, special_cases)
 
     return user_risk
@@ -291,7 +313,7 @@ def user_risk_initial(risk,
 def process(user_profile, step1_rules, step2_rules, step3_rules, finalization_mathods):
     base_risk = calc_base_risk(user_profile, step1_rules)
     user_risk = user_risk_initial(base_risk, user_profile, step2_rules)
-    
+
     to_apply = (rule(user_profile) for rule in step3_rules)
 
     for modifiers in to_apply:
@@ -302,10 +324,11 @@ def process(user_profile, step1_rules, step2_rules, step3_rules, finalization_ma
                 for sub_key, value in modifier.items():
                     # The subkey MUST match the index on the list
                     new_value = user_risk[key][sub_key-1]['value'] + value
-                    user_risk[key][sub_key-1] = {'key':sub_key, 'value':new_value} 
+                    user_risk[key][sub_key -
+                                   1] = {'key': sub_key, 'value': new_value}
             else:
                 user_risk[key] += modifier
-    
+
     for method in finalization_mathods:
         user_risk = method(user_risk)
 
@@ -316,22 +339,23 @@ if __name__ == '__main__':
     import doctest
     doctest.testmod()
 
-    example =  {
-                "age": 35,
-                "dependents": 2,
-                "houses": [ {"key": 1, "ownership_status": "owned"},
-                            {"key": 2, "ownership_status": "mortgaged"} ],
-                "income": 0,
-                "marital_status": "married",
-                "risk_questions": [0, 1, 0],
-                "vehicles": [ {"key": 1, "year": 2018} ] 
-                }
+    example = {
+        "age": 35,
+        "dependents": 2,
+        "houses": [{"key": 1, "ownership_status": "owned"},
+                   {"key": 2, "ownership_status": "mortgaged"}],
+        "income": 0,
+        "marital_status": "married",
+        "risk_questions": [0, 1, 0],
+        "vehicles": [{"key": 1, "year": 2018}]
+    }
 
     assert \
         process(example, general_rules, eligibility, risk_specific_rules, risk_modifiers) == \
-        {'auto': [{'key':1, 'value':'regular'}], 
-        'disability': 'ineligible', 
-        'home':[{'key':1, 'value':'economic'}, {'key':2, 'value':'regular'}], 
-        'life':'regular', 'umbrella':'regular'}
+        {'auto': [{'key': 1, 'value': 'regular'}],
+         'disability': 'ineligible',
+         'home': [{'key': 1, 'value': 'economic'}, {'key': 2, 'value': 'regular'}],
+         'life': 'regular', 'umbrella': 'regular'}
 
-    print(process(example, general_rules, eligibility, risk_specific_rules, risk_modifiers))
+    print(process(example, general_rules, eligibility,
+                  risk_specific_rules, risk_modifiers))

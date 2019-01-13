@@ -7,6 +7,7 @@ Flask 1.0.2+
 
 ### Flask server
 `$ python app.py`
+
 Waits for POST requests on `http://127.0.0.1:5000/risk_profile`
 
 
