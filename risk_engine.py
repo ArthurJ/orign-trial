@@ -173,19 +173,6 @@ def rule_9_home(user_profile) -> dict:
     return {}
 
 
-def calc_base_risk(user_profile, rules) -> int:
-    '''
-        >>> calc_base_risk({"risk_questions": [0, 1, 0]}, [])
-        1
-        >>> calc_base_risk({"risk_questions": [1, 1, 0]}, [lambda x: 1])
-        3
-    '''
-    base_risk = sum(user_profile['risk_questions'])
-    for rule in rules:
-        base_risk += rule(user_profile)
-    return base_risk
-
-
 # Rules organized for each step
 eligibility = {'auto': auto_elegibility, 'disability':disability_elegibility,
                'home': home_elegibility, 'life':life_elegibility}
@@ -248,6 +235,18 @@ def umbrella_score(user_risk):
 risk_modifiers = [score_mapping, umbrella_score]
 
 # Process helper functions
+def calc_base_risk(user_profile, rules) -> int:
+    '''
+        >>> calc_base_risk({"risk_questions": [0, 1, 0]}, [])
+        1
+        >>> calc_base_risk({"risk_questions": [1, 1, 0]}, [lambda x: 1])
+        3
+    '''
+    base_risk = sum(user_profile['risk_questions'])
+    for rule in rules:
+        base_risk += rule(user_profile)
+    return base_risk
+
 def user_risk_special(user_risk, user_profile, special_cases):
     '''
         >>> user_risk_special({'auto': 127}, \

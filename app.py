@@ -6,7 +6,6 @@ app = Flask(__name__)
 
 @app.route('/risk_profile', methods=['POST'])
 def index():
-    print(request.json)
     return jsonify( 
             process(request.json, 
                     general_rules, 
