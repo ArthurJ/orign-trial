@@ -186,6 +186,7 @@ def calc_base_risk(user_profile, rules) -> int:
     return base_risk
 
 
+# Rules organized for each step
 eligibility = {'auto': auto_elegibility, 'disability':disability_elegibility,
                'home': home_elegibility, 'life':life_elegibility}
 
@@ -193,7 +194,59 @@ general_rules = [rule_3, rule_4]
 
 risk_specific_rules = [rule_5, rule_6, rule_7, rule_8, rule_9_auto, rule_9_home]
 
+# Last step methods
+def score_mapping(user_risk):
+    '''
+        >>> score_mapping({'auto':'ineligible', 'home':[{'value':1},{'value':3}], 'life':0 })
+        {'auto': 'ineligible', 'home': [{'value': 'regular'}, {'value': 'responsible'}], 'life': 'economic'}
+    '''
+    def mapping(v):
+        if v <= 0: return 'economic'
+        elif 0 < v <=2: return 'regular'
+        else: return 'responsible'
 
+    for paper, value in user_risk.items():
+        if value == 'ineligible':
+            continue
+        elif isinstance(value, list):
+            for item in value:
+                item['value'] = mapping(item['value'])
+        else:
+            user_risk[paper] = mapping(value)
+
+    return user_risk
+
+def umbrella_score(user_risk):
+    '''
+        >>> umbrella_score({'auto': 'ineligible', \
+                            'home': [{'value': 'economic'}, \
+                                     {'value': 'regular'}], \
+                                     'life': 'responsible'})
+        {'auto': 'ineligible', 'home': [{'value': 'economic'}, {'value': 'regular'}], 'life': 'responsible', 'umbrella': 'regular'}
+    '''
+    # TODO, não há uma regra clara para definir o score da  umbrella, necessário perguntar  
+    for _, value in user_risk.copy().items():
+        if value == 'ineligible':
+            continue
+        elif value == 'economic':
+            user_risk['umbrella'] = 'regular'
+            break
+        elif isinstance(value, list):
+            for item in value:
+                if item['value'] == 'economic':
+                    user_risk['umbrella'] = 'regular'
+                    break
+            else:
+                continue
+            break
+
+    else:
+        user_risk['umbrella'] = 'ineligible'
+
+    return user_risk
+
+
+# Process helper functions
 def user_risk_special(user_risk, user_profile, special_cases):
     '''
         >>> user_risk_special({'auto': 127}, \
@@ -234,6 +287,7 @@ def user_risk_initial(risk,
 
     return user_risk
 
+
 def process(user_profile, phase1_rules, phase2_rule_dict, phase3_rules):
     base_risk = calc_base_risk(user_profile, phase1_rules)
     user_risk = user_risk_initial(base_risk, user_profile, phase2_rule_dict)
@@ -246,11 +300,15 @@ def process(user_profile, phase1_rules, phase2_rule_dict, phase3_rules):
                 continue
             elif isinstance(modifier, dict):
                 for sub_key, value in modifier.items():
+                    # The subkey MUST match the index on the list
                     new_value = user_risk[key][sub_key-1]['value'] + value
                     user_risk[key][sub_key-1] = {'key':sub_key, 'value':new_value} 
             else:
                 user_risk[key] += modifier
     
+
+    user_risk = score_mapping(user_risk)
+    user_risk = umbrella_score(user_risk)
     return user_risk
 
 
@@ -271,9 +329,9 @@ if __name__ == '__main__':
 
     assert \
         process(example, general_rules, eligibility, risk_specific_rules) == \
-        {'auto': [{'key':1, 'value':2}], 
+        {'auto': [{'key':1, 'value':'regular'}], 
         'disability': 'ineligible', 
-        'home':[{'key':1, 'value':0}, {'key':2, 'value':1}], 
-        'life':2}
+        'home':[{'key':1, 'value':'economic'}, {'key':2, 'value':'regular'}], 
+        'life':'regular', 'umbrella':'regular'}
 
-    # TODO mapping to the 'economic'/'regular'/'responsible' descriptions
+    print(process(example, general_rules, eligibility, risk_specific_rules))
