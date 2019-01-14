@@ -164,7 +164,7 @@ def rule_9_auto(user_profile) -> dict:
         >>> rule_9_auto({'vehicles': [{"key": 1, "year": 2018}]})
         {'auto': {1: 1}}
         >>> rule_9_auto({'vehicles': [{"key": 1, "year": 2018}, \
-                                 {"key": 2, "year": 2017}]})
+                                      {"key": 2, "year": 2017}]})
         {}
     '''
     if len(user_profile['vehicles']) == 1:
@@ -196,12 +196,7 @@ risk_specific_rules = [rule_5, rule_6,
 
 
 # Last step methods
-def score_mapping(user_risk):
-    '''
-        >>> score_mapping({'auto':'ineligible', 'home':[{'value':1},{'value':3}], 'life':0 })
-        {'auto': 'ineligible', 'home': [{'value': 'regular'}, {'value': 'responsible'}], 'life': 'economic'}
-    '''
-    def mapping(v):
+def mapping(v):
         if v <= 0:
             return 'economic'
         elif 0 < v <= 2:
@@ -209,6 +204,12 @@ def score_mapping(user_risk):
         else:
             return 'responsible'
 
+
+def score_mapping(user_risk, user_profile):
+    '''
+        >>> score_mapping({'auto':'ineligible', 'home':[{'value':1},{'value':3}], 'life':0 }, {})
+        {'auto': 'ineligible', 'home': [{'value': 'regular'}, {'value': 'responsible'}], 'life': 'economic'}
+    '''
     for paper, value in user_risk.items():
         if value == 'ineligible':
             continue
@@ -221,25 +222,27 @@ def score_mapping(user_risk):
     return user_risk
 
 
-def umbrella_score(user_risk):
+def umbrella_score(user_risk, user_profile):
     '''
         >>> umbrella_score({'auto': 'ineligible', \
                             'home': [{'value': 'economic'}, \
                                      {'value': 'regular'}], \
-                                     'life': 'responsible'})
+                                     'life': 'responsible'}, {'risk_questions':[1,1,0]})
         {'auto': 'ineligible', 'home': [{'value': 'economic'}, {'value': 'regular'}], 'life': 'responsible', 'umbrella': 'regular'}
     '''
-    # TODO, não há uma regra clara para definir o score da  umbrella, necessário perguntar
+    base_risk = sum(user_profile['risk_questions'])
+    base_risk = mapping(base_risk)
+
     for _, value in user_risk.copy().items():
         if value == 'ineligible':
             continue
         elif value == 'economic':
-            user_risk['umbrella'] = 'regular'
+            user_risk['umbrella'] = base_risk
             break
         elif isinstance(value, list):
             for item in value:
                 if item['value'] == 'economic':
-                    user_risk['umbrella'] = 'regular'
+                    user_risk['umbrella'] = base_risk
                     break
             else:
                 continue
@@ -330,7 +333,7 @@ def process(user_profile, step1_rules, step2_rules, step3_rules, finalization_ma
                 user_risk[key] += modifier
 
     for method in finalization_mathods:
-        user_risk = method(user_risk)
+        user_risk = method(user_risk, user_profile)
 
     return user_risk
 
